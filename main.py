@@ -2,6 +2,7 @@ import telebot
 import requests
 import json
 import os
+import base64
 from flask import Flask
 from threading import Thread
 
@@ -83,7 +84,7 @@ def callback_inline(call):
         bot.answer_callback_query(call.id, "✅ تم التفعيل وإرسال البشارة للطالب!")
     elif data.startswith("vip_reject_") and call.from_user.id == ADMIN_CHAT_ID:
         target_id = int(data.split("_")[-1])
-        bot.send_message(target_id, "❌ *عذراً، رفضت الإدارة طلب التفعيل الحالي لعدم مطابقة بيانات التحويل.*", parse_mode="Markdown")
+        bot.send_message(target_id, "❌ *عذراً، رفضت الإدارةطلب التفعيل الحالي لعدم مطابقة بيانات التحويل.*", parse_mode="Markdown")
         bot.answer_callback_query(call.id, "❌ تم إرسال رسالة الرفض!")
 
 def send_payment_message(user_id):
@@ -143,3 +144,4 @@ if __name__ == '__main__':
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling()
+
