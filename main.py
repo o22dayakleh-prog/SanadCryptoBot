@@ -15,11 +15,11 @@ def run():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# سحب البيانات من الخزنة السرية لحمايتها من الحظر
+# سحب البيانات بشكل آمن ومحمي تماماً من الخزنة
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# إعدادات المحفظة والآدمن الخاصة بك يا أوداي
+# الإعدادات الخاصة بك يا أوداي
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
 
@@ -48,7 +48,6 @@ def welcome(message):
     
     if user_id not in user_attempts:
         user_attempts[user_id] = 0
-        # إشعار فوري للآدمن (أوداي) بدخول مستخدم جديد مع معرفه
         new_user_alert = (
             f"👤 *مستخدم جديد دخل البوت الآن!*\n\n"
             f"• الاسم: {message.from_user.first_name}\n"
@@ -80,12 +79,12 @@ def callback_inline(call):
     elif data.startswith("vip_accept_") and call.from_user.id == ADMIN_CHAT_ID:
         target_id = int(data.split("_")[-1])
         vip_users.add(target_id)
-        bot.send_message(target_id, "🎉 *تهانينا! تم فحص التحويل وتفعيل اشتراكك في الباقة المميزة VIP بنجاح. يمكنك الآن استخدام البوت بلا حدود مدى الحياة!*", parse_mode="Markdown")
-        bot.answer_callback_query(call.id, "✅ تم التفعيل وإرسال البشارة للطالب!")
+        bot.send_message(target_id, "🎉 *تهانينا! تم تفعيل اشتراكك في الباقة المميزة VIP بنجاح. يمكنك الآن استخدام البوت بلا حدود مدى الحياة!*", parse_mode="Markdown")
+        bot.answer_callback_query(call.id, "✅ تم التفعيل!")
     elif data.startswith("vip_reject_") and call.from_user.id == ADMIN_CHAT_ID:
         target_id = int(data.split("_")[-1])
-        bot.send_message(target_id, "❌ *عذراً، رفضت الإدارةطلب التفعيل الحالي لعدم مطابقة بيانات التحويل.*", parse_mode="Markdown")
-        bot.answer_callback_query(call.id, "❌ تم إرسال رسالة الرفض!")
+        bot.send_message(target_id, "❌ *عذراً، رفضت الإدارة طلب التفعيل لعدم تطابقة بيانات التحويل.*", parse_mode="Markdown")
+        bot.answer_callback_query(call.id, "❌ تم الرفض!")
 
 def send_payment_message(user_id):
     premium_text = (
@@ -93,7 +92,7 @@ def send_payment_message(user_id):
         "💎 للاشتراك في الباقة المميزة VIP وفتح البوت بلا حدود مدى الحياة:\n"
         "💵 قيمة الاشتراك الثابت: *5$ USDT* فقط لا غير.\n\n"
         f"قم بتحويل مبلغ الاشتراك إلى محفظة (TRC20) التالية بلمسة واحدة لنسخها:\n\n`{MY_CRYPTO_WALLET}`\n\n"
-        "📥 بعد إتمام التحويل، التقط لقطة شاشة لعملية الدفع وأرسلها كصورة هنا فوراً ليتم تفعيل حسابك!"
+        "📥 بعد إتمام التحويل، التقط لقطة شاشة لعملية الدفع وأرسلها كصورة هنا فوراً لتفعيل حسابك!"
     )
     bot.send_message(user_id, premium_text, parse_mode="Markdown")
 
@@ -113,7 +112,7 @@ def handle_gemini_ai(message):
     
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
-        ai_result = response.json()['candidates']['content']['parts']['text']
+        ai_result = response.json()['candidates'][0]['content']['parts'][0]['text']
     except:
         ai_result = "❌ واجهت مشكلة في الاتصال بخوادم الذكاء الاصطناعي."
 
@@ -144,4 +143,5 @@ if __name__ == '__main__':
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling()
+
 
