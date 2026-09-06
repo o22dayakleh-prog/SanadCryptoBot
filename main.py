@@ -1,7 +1,13 @@
-import telebot
+import os
+# تثبيت المكتبات تلقائياً من داخل الكود لضمان تخطي أي خطأ في السيرفر
+try:
+    import telebot
+except ImportError:
+    os.system('pip install pyTelegramBotAPI requests Flask')
+    import telebot
+
 import requests
 import json
-import os
 import base64
 from flask import Flask
 from threading import Thread
@@ -23,7 +29,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
 
-# حركة الذكاء والإنعاش التلقائي لفك التداخل 409 فوراً
+# حركة الذكاء والإنعاش التلقائي لفك التداخل فوراً
 try:
     requests.get(f"https://telegram.org{TELEGRAM_TOKEN}/deleteWebhook?drop_pending_updates=True", timeout=10)
 except:
@@ -149,3 +155,4 @@ if __name__ == '__main__':
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling()
+
