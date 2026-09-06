@@ -23,6 +23,12 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
 
+# حركة الذكاء والإنعاش التلقائي لفك التداخل 409 فوراً
+try:
+    requests.get(f"https://telegram.org{TELEGRAM_TOKEN}/deleteWebhook?drop_pending_updates=True", timeout=10)
+except:
+    pass
+
 bot = telebot.TeleBot(TELEGRAM_TOKEN, skip_pending=True)
 user_attempts = {}
 vip_users = set()
@@ -79,11 +85,11 @@ def callback_inline(call):
     elif data.startswith("vip_accept_") and call.from_user.id == ADMIN_CHAT_ID:
         target_id = int(data.split("_")[-1])
         vip_users.add(target_id)
-        bot.send_message(target_id, "🎉 *تهانينا! تم تفعيل اشتراكك في الباقة المميزة VIP بنجاح. يمكنك الآن استخدام البوت بلا حدود مدى الحياة!*", parse_mode="Markdown")
+        bot.send_message(target_id, "🎉 *تهانينا! تم فحص التحويل وتفعيل اشتراكك في الباقة المميزة VIP بنجاح. يمكنك الآن استخدام البوت بلا حدود مدى الحياة!*", parse_mode="Markdown")
         bot.answer_callback_query(call.id, "✅ تم التفعيل!")
     elif data.startswith("vip_reject_") and call.from_user.id == ADMIN_CHAT_ID:
         target_id = int(data.split("_")[-1])
-        bot.send_message(target_id, "❌ *عذراً، رفضت الإدارة طلب التفعيل لعدم تطابقة بيانات التحويل.*", parse_mode="Markdown")
+        bot.send_message(target_id, "❌ *عذراً، رفضت الإدارة طلب التفعيل لعدم تطابق بيانات التحويل.*", parse_mode="Markdown")
         bot.answer_callback_query(call.id, "❌ تم الرفض!")
 
 def send_payment_message(user_id):
@@ -112,7 +118,7 @@ def handle_gemini_ai(message):
     
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
-        ai_result = response.json()['candidates'][0]['content']['parts'][0]['text']
+        ai_result = response.json()['candidates']['content']['parts']['text']
     except:
         ai_result = "❌ واجهت مشكلة في الاتصال بخوادم الذكاء الاصطناعي."
 
@@ -143,5 +149,3 @@ if __name__ == '__main__':
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling()
-
-
