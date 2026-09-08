@@ -1,5 +1,4 @@
 import os
-# تثبيت المكتبات تلقائياً من داخل الكود لضمان تخطي أي خطأ في السيرفر
 try:
     import telebot
 except ImportError:
@@ -21,19 +20,11 @@ def run():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# سحب البيانات بشكل آمن ومحمي تماماً من الخزنة
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# الإعدادات الخاصة بك يا أوداي
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
-
-# حركة الذكاء والإنعاش التلقائي لفك التداخل فوراً
-try:
-    requests.get(f"https://telegram.org{TELEGRAM_TOKEN}/deleteWebhook?drop_pending_updates=True", timeout=10)
-except:
-    pass
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN, skip_pending=True)
 user_attempts = {}
@@ -58,18 +49,19 @@ def welcome(message):
     user_id = message.chat.id
     username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد معرف"
     
-    if user_id not in user_attempts:
-        user_attempts[user_id] = 0
-        new_user_alert = (
-            f"👤 *مستخدم جديد دخل البوت الآن!*\n\n"
-            f"• الاسم: {message.from_user.first_name}\n"
-            f"• المعرف: {username}\n"
-            f"• الآيدي: `{user_id}`"
-        )
-        try:
+    # حزام الأمان البرمجي لمنع تجمد البوت نهائياً
+    try:
+        if user_id not in user_attempts:
+            user_attempts[user_id] = 0
+            new_user_alert = (
+                f"👤 *مستخدم جديد دخل البوت الآن!*\n\n"
+                f"• الاسم: {message.from_user.first_name}\n"
+                f"• المعرف: {username}\n"
+                f"• الآيدي: `{user_id}`"
+            )
             bot.send_message(ADMIN_CHAT_ID, new_user_alert, parse_mode="Markdown")
-        except:
-            pass
+    except:
+        pass
 
     welcome_text = (
         "🌟 أهلاً بك في بوت السند الرقمي AI المساعد الذكي المتكامل!\n\n"
@@ -104,7 +96,7 @@ def send_payment_message(user_id):
         "💎 للاشتراك في الباقة المميزة VIP وفتح البوت بلا حدود مدى الحياة:\n"
         "💵 قيمة الاشتراك الثابت: *5$ USDT* فقط لا غير.\n\n"
         f"قم بتحويل مبلغ الاشتراك إلى محفظة (TRC20) التالية بلمسة واحدة لنسخها:\n\n`{MY_CRYPTO_WALLET}`\n\n"
-        "📥 بعد إتمام التحويل، التقط لقطة شاشة لعملية الدفع وأرسلها كصورة هنا فوراً لتفعيل حسابك!"
+        "📥 بعد إتمام التحويل، التقط لقطة شاشة لعملية الدفع وأرسلها كصورة هنا فوراً ليتم تفعيل حسابك!"
     )
     bot.send_message(user_id, premium_text, parse_mode="Markdown")
 
@@ -148,11 +140,17 @@ def handle_payment_screenshot(message):
         f"• الآيدي: `{user_id}`\n\n"
         f"قم بفتح محفظتك والتأكد، ثم اضغط على خيار التحكم أدناه لتفعيل حساب الطالب فوراً وبنقرة واحدة:"
     )
-    bot.send_photo(ADMIN_CHAT_ID, photo_id, caption=caption_text, reply_markup=admin_buttons(user_id), parse_mode="Markdown")
+    # حماية إرسال صور التحويل للآدمن
+    try:
+        bot.send_photo(ADMIN_CHAT_ID, photo_id, caption=caption_text, reply_markup=admin_buttons(user_id), parse_mode="Markdown")
+    except:
+        pass
 
 if __name__ == '__main__':
+    bot.remove_webhook() # سطر الإنعاش الذاتي الفوري لفرمتة خوادم تلغرام تلقائياً
     t = Thread(target=run)
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
-    bot.infinity_polling()
+    bot.infinity_polling(none_stop=True)
+
 
