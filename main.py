@@ -20,8 +20,9 @@ def run():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+# حقن التوكن والمفتاح الأمريكي الجديد مباشرة داخل الكود لضمان تخطي أي حظر أو قيود
+TELEGRAM_TOKEN = "8969525324:AAHVTIBIYSeQrS3zjAlaMPGGEIevWPRL39k"
+GEMINI_API_KEY = "AQ.Ab8RN6LPrR-LUo3GEK78v41hPSNnt-RLnbwTTXYfRywTGBnsyg"
 
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
@@ -76,7 +77,7 @@ def callback_inline(call):
     data = call.data
     
     if data == "start_chat":
-        bot.send_message(user_id, "📝 رائع! أرسل لي الآن النص الطويل الذي تريد تلخيصه، أو اكتب سؤالك مباشرة.")
+        bot.send_message(user_id, "📝 رائع! أرسل لي الآن النص الطويل الذي تريد تلخيصه, أو اكتب سؤالك مباشرة.")
     elif data == "premium_info":
         send_payment_message(user_id)
     elif data.startswith("vip_accept_") and call.from_user.id == ADMIN_CHAT_ID:
@@ -110,14 +111,13 @@ def handle_gemini_ai(message):
 
     status_msg = bot.reply_to(message, "⏳ جاري التفكير والتلخيص...")
     
-    # استخدام الرابط المباشر والمستقر لـ Gemini المحدث عالمياً لفك قيود السيرفرات
     url = f"https://googleapis.com{GEMINI_API_KEY}"
     headers = {'Content-Type': 'application/json'}
     payload = {"contents": [{"parts": [{"text": f"اكتب باللغة العربية وباحترافية عالية تفصيلية ومقنعة: {message.text}"}]}]}
     
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=20)
-        ai_result = response.json()['candidates'][0]['content']['parts'][0]['text']
+        ai_result = response.json()['candidates']['content']['parts']['text']
     except Exception as e:
         ai_result = "❌ واجهت مشكلة في الاتصال بخوادم الذكاء الاصطناعي، يرجى المحاولة بعد قليل أو التأكد من إعدادات المفتاح."
 
@@ -155,6 +155,7 @@ if __name__ == '__main__':
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling(none_stop=True)
+
 
 
 
