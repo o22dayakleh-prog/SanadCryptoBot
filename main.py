@@ -49,7 +49,6 @@ def welcome(message):
     user_id = message.chat.id
     username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد معرف"
     
-    # حزام الأمان البرمجي لمنع تجمد البوت نهائياً
     try:
         if user_id not in user_attempts:
             user_attempts[user_id] = 0
@@ -110,15 +109,17 @@ def handle_gemini_ai(message):
         user_attempts[user_id] = user_attempts.get(user_id, 0) + 1
 
     status_msg = bot.reply_to(message, "⏳ جاري التفكير والتلخيص...")
+    
+    # استخدام الرابط المباشر والمستقر لـ Gemini المحدث عالمياً لفك قيود السيرفرات
     url = f"https://googleapis.com{GEMINI_API_KEY}"
     headers = {'Content-Type': 'application/json'}
-    payload = {"contents": [{"parts": [{"text": f"قم بتلخيص أو الإجابة باللغة العربية وباحترافية عالية: {message.text}"}]}]}
+    payload = {"contents": [{"parts": [{"text": f"اكتب باللغة العربية وباحترافية عالية تفصيلية ومقنعة: {message.text}"}]}]}
     
     try:
-        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=15)
-        ai_result = response.json()['candidates']['content']['parts']['text']
-    except:
-        ai_result = "❌ واجهت مشكلة في الاتصال بخوادم الذكاء الاصطناعي."
+        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=20)
+        ai_result = response.json()['candidates'][0]['content']['parts'][0]['text']
+    except Exception as e:
+        ai_result = "❌ واجهت مشكلة في الاتصال بخوادم الذكاء الاصطناعي، يرجى المحاولة بعد قليل أو التأكد من إعدادات المفتاح."
 
     try:
         bot.delete_message(user_id, status_msg.message_id)
@@ -140,17 +141,20 @@ def handle_payment_screenshot(message):
         f"• الآيدي: `{user_id}`\n\n"
         f"قم بفتح محفظتك والتأكد، ثم اضغط على خيار التحكم أدناه لتفعيل حساب الطالب فوراً وبنقرة واحدة:"
     )
-    # حماية إرسال صور التحويل للآدمن
     try:
         bot.send_photo(ADMIN_CHAT_ID, photo_id, caption=caption_text, reply_markup=admin_buttons(user_id), parse_mode="Markdown")
     except:
         pass
 
 if __name__ == '__main__':
-    bot.remove_webhook() # سطر الإنعاش الذاتي الفوري لفرمتة خوادم تلغرام تلقائياً
+    try:
+        bot.remove_webhook()
+    except:
+        pass
     t = Thread(target=run)
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling(none_stop=True)
+
 
 
