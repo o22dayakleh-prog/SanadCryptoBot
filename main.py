@@ -20,9 +20,9 @@ def run():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# حقن التوكن والمفتاح الأمريكي الجديد مباشرة داخل الكود لضمان تخطي أي حظر أو قيود
-TELEGRAM_TOKEN = "8969525324:AAHVTIBIYSeQrS3zjAlaMPGGEIevWPRL39k"
-GEMINI_API_KEY = "AQ.Ab8RN6LPrR-LUo3GEK78v41hPSNnt-RLnbwTTXYfRywTGBnsyg"
+# حقن المفاتيح الصالحة مباشرة داخل الكود لضمان الاستقرار التام
+TELEGRAM_TOKEN = "8969525324:AAH5S82jEbGCn-W4NBIfEC1nwbZcLhfS6gQ"
+GEMINI_API_KEY = "AQ.Ab8RN6Jf8sBdOvjFZOXHmKQcAYpUM_ovWONGnWDLOeGFalrjgA"
 
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
@@ -77,13 +77,13 @@ def callback_inline(call):
     data = call.data
     
     if data == "start_chat":
-        bot.send_message(user_id, "📝 رائع! أرسل لي الآن النص الطويل الذي تريد تلخيصه, أو اكتب سؤالك مباشرة.")
+        bot.send_message(user_id, "📝 رائع! أرسل لي الآن النص الطويل الذي تريد تلخيصه، أو اكتب سؤالك مباشرة.")
     elif data == "premium_info":
         send_payment_message(user_id)
     elif data.startswith("vip_accept_") and call.from_user.id == ADMIN_CHAT_ID:
         target_id = int(data.split("_")[-1])
         vip_users.add(target_id)
-        bot.send_message(target_id, "🎉 *تهانينا! تم فحص التحويل وتفعيل اشتراكك في الباقة المميزة VIP بنجاح. يمكنك الآن استخدام البوت بلا حدود مدى الحياة!*", parse_mode="Markdown")
+        bot.send_message(target_id, "🎉 *تهانينا! تم تفعيل اشتراكك في الباقة المميزة VIP بنجاح. يمكنك الآن استخدام البوت بلا حدود مدى الحياة!*", parse_mode="Markdown")
         bot.answer_callback_query(call.id, "✅ تم التفعيل!")
     elif data.startswith("vip_reject_") and call.from_user.id == ADMIN_CHAT_ID:
         target_id = int(data.split("_")[-1])
@@ -110,7 +110,6 @@ def handle_gemini_ai(message):
         user_attempts[user_id] = user_attempts.get(user_id, 0) + 1
 
     status_msg = bot.reply_to(message, "⏳ جاري التفكير والتلخيص...")
-    
     url = f"https://googleapis.com{GEMINI_API_KEY}"
     headers = {'Content-Type': 'application/json'}
     payload = {"contents": [{"parts": [{"text": f"اكتب باللغة العربية وباحترافية عالية تفصيلية ومقنعة: {message.text}"}]}]}
@@ -119,7 +118,7 @@ def handle_gemini_ai(message):
         response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=20)
         ai_result = response.json()['candidates']['content']['parts']['text']
     except Exception as e:
-        ai_result = "❌ واجهت مشكلة في الاتصال بخوادم الذكاء الاصطناعي، يرجى المحاولة بعد قليل أو التأكد من إعدادات المفتاح."
+        ai_result = "❌ واجهت مشكلة في الاتصال بخوادم الذكاء الاصطناعي، يرجى المحاولة بعد قليل."
 
     try:
         bot.delete_message(user_id, status_msg.message_id)
@@ -147,10 +146,6 @@ def handle_payment_screenshot(message):
         pass
 
 if __name__ == '__main__':
-    try:
-        bot.remove_webhook()
-    except:
-        pass
     t = Thread(target=run)
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
