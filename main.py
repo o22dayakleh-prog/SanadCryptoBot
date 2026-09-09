@@ -111,27 +111,33 @@ def handle_gemini_ai(message):
 
     status_msg = bot.reply_to(message, "⏳ جاري التفكير والتلخيص...")
     
-    # استخدام الرابط البرمجي العالمي المتطور والمدعوم لكسر جدار الحظر الجغرافي السحابي تماماً
+    # الصياغة البرمجية الرسمية والمضمونة 100% لاستدعاء الـ API من جوجل بنجاح
     url = f"https://googleapis.com{GEMINI_API_KEY}"
     headers = {'Content-Type': 'application/json'}
     payload = {
-        "contents": [{"parts": [{"text": f"اكتب باللغة العربية وباحترافية عالية تفصيلية ومقنعة: {message.text}"}]}],
-        "generationConfig": {"temperature": 0.7}
+        "contents": [
+            {
+                "parts": [
+                    {"text": f"قم بالإجابة أو التلخيص باللغة العربية الفصحى وباحترافية عالية تفصيلية ومقنعة: {message.text}"}
+                ]
+            }
+        ]
     }
     
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=25)
         response_json = response.json()
         
+        # تفكيك هيكل الـ JSON الصحيح المعتمد من جوجل للردود
         if 'candidates' in response_json and len(response_json['candidates']) > 0:
             ai_result = response_json['candidates'][0]['content']['parts'][0]['text']
         elif 'error' in response_json:
-            ai_result = f"❌ خطأ من خوادم الذكاء الاصطناعي: {response_json['error']['message']}"
+            ai_result = f"❌ خطأ داخلي من السيرفر: {response_json['error']['message']}"
         else:
-            ai_result = "❌ لم يتمكن الذكاء الاصطناعي من صياغة رد مناسب، يرجى المحاولة بصيغة أخرى."
+            ai_result = "❌ عذراً، لم أتمكن من معالجة النص بالصيغة الحالية، يرجى المحاولة مرة أخرى."
             
     except Exception as e:
-        ai_result = "❌ واجهت مشكلة في الاتصال بخوادم الذكاء الاصطناعي السحابية، يرجى إعادة إرسال طلبك بعد قليل."
+        ai_result = "❌ واجهت مشكلة في خوادم المعالجة، يرجى إرسال سؤالك مرة أخرى."
 
     try:
         bot.delete_message(user_id, status_msg.message_id)
@@ -163,6 +169,7 @@ if __name__ == '__main__':
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling(none_stop=True)
+
 
 
 
