@@ -20,9 +20,9 @@ def run():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# سحب البيانات بشكل آمن ومحمي تماماً من الخزنة السرية المشفّرة في Render
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+# الرموز الفعّالة والمحمية
+TELEGRAM_TOKEN = "8969525324:AAH5S82jEbGCn-W4NBIfEC1nwbZcLhfS6gQ"
+GEMINI_API_KEY = "AQ.Ab8RN6Jf8sBdOvjFZOXHmKQcAYpUM_ovWONGnWDLOeGFalrjgA"
 
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
@@ -50,6 +50,12 @@ def welcome(message):
     user_id = message.chat.id
     username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد معرف"
     
+    # فسخ وفرمتة أي جلسات معلقة تلقائياً عند الضغط على start لإنهاء خطأ 409
+    try:
+        requests.get(f"https://telegram.org{TELEGRAM_TOKEN}/deleteWebhook?drop_pending_updates=True", timeout=5)
+    except:
+        pass
+
     try:
         if user_id not in user_attempts:
             user_attempts[user_id] = 0
@@ -111,7 +117,6 @@ def handle_gemini_ai(message):
 
     status_msg = bot.reply_to(message, "⏳ جاري التفكير والتلخيص...")
     
-    # الصياغة البرمجية الرسمية والمضمونة 100% لاستدعاء الـ API من جوجل بنجاح
     url = f"https://googleapis.com{GEMINI_API_KEY}"
     headers = {'Content-Type': 'application/json'}
     payload = {
@@ -128,9 +133,8 @@ def handle_gemini_ai(message):
         response = requests.post(url, headers=headers, json=payload, timeout=25)
         response_json = response.json()
         
-        # تفكيك هيكل الـ JSON الصحيح المعتمد من جوجل للردود
         if 'candidates' in response_json and len(response_json['candidates']) > 0:
-            ai_result = response_json['candidates'][0]['content']['parts'][0]['text']
+            ai_result = response_json['candidates']['content']['parts']['text']
         elif 'error' in response_json:
             ai_result = f"❌ خطأ داخلي من السيرفر: {response_json['error']['message']}"
         else:
@@ -169,6 +173,7 @@ if __name__ == '__main__':
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling(none_stop=True)
+
 
 
 
