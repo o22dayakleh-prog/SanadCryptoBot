@@ -30,6 +30,10 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
 
+# تهيئة مكتبة جوجل الرسمية بالمفتاح السري الفعال
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
+
 bot = telebot.TeleBot(TELEGRAM_TOKEN, skip_pending=True)
 user_attempts = {}
 vip_users = set()
@@ -114,31 +118,14 @@ def handle_gemini_ai(message):
 
     status_msg = bot.reply_to(message, "⏳ جاري التفكير والتلخيص...")
     
-    # استخدام نظام الاتصال البرمجي السريع والمباشر (v1) لكسر أي تعليق في السيرفرات السحابية
-    url = f"https://googleapis.com{GEMINI_API_KEY}"
-    headers = {'Content-Type': 'application/json'}
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": f"قم بكتابة الإجابة كاملة وتفصيلية باللغة العربية الفصحى وباحترافية عالية: {message.text}"}
-                ]
-            }
-        ]
-    }
-    
     try:
-        # إيقاف التعليق بمهلة اتصال صارمة (timeout=15) لإرغام السيرفر على تمرير الإجابة فوراً
-        response = requests.post(url, headers=headers, json=payload, timeout=15)
-        response_json = response.json()
+        response = model.generate_content(
+            f"قم بالإجابة أو التلخيص باللغة العربية الفصحى وباحترافية عالية تفصيلية ومقنعة: {message.text}"
+        )
+        ai_result = response.text
         
-        if 'candidates' in response_json and len(response_json['candidates']) > 0:
-            ai_result = response_json['candidates']['content']['parts']['text']
-        else:
-            ai_result = "❌ عذراً، لم يتم الاستجابة من خوادم المعالجة، يرجى تكرار إرسال سؤالك."
-            
     except Exception as e:
-        ai_result = "❌ واجهت خوادم السحاب ضغطاً مؤقتاً، يرجى إعادة إرسال سؤالك الحين وسيصلك الرد الفوري."
+        ai_result = "❌ خوادم المعالجة ممتلئة حالياً، يرجى إعادة إرسال سؤالك خلال ثوانٍ معدودة."
 
     try:
         bot.delete_message(user_id, status_msg.message_id)
@@ -166,6 +153,11 @@ def handle_payment_screenshot(message):
         pass
 
 if __name__ == '__main__':
+    try:
+        # الأمر السحري والقاطع لطرد خطأ الـ 409 وفرمتة تليجرام تلقائياً عند الإقلاع
+        bot.delete_webhook(drop_pending_updates=True)
+    except:
+        pass
     t = Thread(target=run)
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
