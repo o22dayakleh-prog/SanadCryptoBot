@@ -1,7 +1,6 @@
 import os
 import sys
 
-# التثبيت التلقائي والمضمون للمكتبات الرسمية لمنع أي خطأ في السيرفر
 try:
     import telebot
     import google.generativeai as genai
@@ -30,30 +29,6 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
-
-# تهيئة مكتبة جوجل الرسمية بالمفتاح السري
-genai.configure(api_key=GEMINI_API_KEY)
-
-# إعدادات متطورة لتعطيل الفحص الجغرافي المتشدد وتسريع تدفق الردود
-generation_config = {
-    "temperature": 0.7,
-    "top_p": 0.95,
-    "top_k": 40,
-    "max_output_tokens": 2048,
-}
-
-safety_settings = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
-
-model = genai.GenerativeModel(
-    model_name='gemini-1.5-flash',
-    generation_config=generation_config,
-    safety_settings=safety_settings
-)
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN, skip_pending=True)
 user_attempts = {}
@@ -139,15 +114,31 @@ def handle_gemini_ai(message):
 
     status_msg = bot.reply_to(message, "⏳ جاري التفكير والتلخيص...")
     
+    # استخدام نظام الاتصال البرمجي السريع والمباشر (v1) لكسر أي تعليق في السيرفرات السحابية
+    url = f"https://googleapis.com{GEMINI_API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": f"قم بكتابة الإجابة كاملة وتفصيلية باللغة العربية الفصحى وباحترافية عالية: {message.text}"}
+                ]
+            }
+        ]
+    }
+    
     try:
-        # استدعاء مباشر ورسمي وآمن 100% لتجاوز أي جدار حظر جغرافي
-        response = model.generate_content(
-            f"اكتب باللغة العربية الفصحى وباحترافية عالية تفصيلية ومقنعة: {message.text}"
-        )
-        ai_result = response.text
+        # إيقاف التعليق بمهلة اتصال صارمة (timeout=15) لإرغام السيرفر على تمرير الإجابة فوراً
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
+        response_json = response.json()
         
+        if 'candidates' in response_json and len(response_json['candidates']) > 0:
+            ai_result = response_json['candidates']['content']['parts']['text']
+        else:
+            ai_result = "❌ عذراً، لم يتم الاستجابة من خوادم المعالجة، يرجى تكرار إرسال سؤالك."
+            
     except Exception as e:
-        ai_result = "❌ خوادم المعالجة ممتلئة حالياً، يرجى إعادة إرسال سؤالك خلال ثوانٍ معدودة."
+        ai_result = "❌ واجهت خوادم السحاب ضغطاً مؤقتاً، يرجى إعادة إرسال سؤالك الحين وسيصلك الرد الفوري."
 
     try:
         bot.delete_message(user_id, status_msg.message_id)
