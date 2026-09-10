@@ -1,7 +1,7 @@
 import os
 import sys
 
-# تنظيف المفاتيح من أي أسطر جديدة أو مسافات خفية
+# تنظيف المفاتيح تلقائياً من المسافات المخفية والأسطر الجديدة
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "").strip()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
@@ -128,9 +128,7 @@ def handle_gemini_ai(message):
         print(f"Gemini API Error: {e}")
         ai_result = "❌ حدث خطأ أثناء الاتصال بالذكاء الاصطناعي، يرجى المحاولة لاحقاً."
 
-    # تعديل نفس الرسالة بدلاً من مسحها ثم إرسال جديدة لتفادي أخطاء التلغرام
     try:
-        # إذا تجاوز النص حد تلغرام (4000 حرف)، يتم تقطيعه
         if len(ai_result) > 4000:
             bot.edit_message_text(ai_result[:4000], chat_id=user_id, message_id=status_msg.message_id)
             bot.send_message(user_id, ai_result[4000:])
@@ -169,6 +167,7 @@ if __name__ == '__main__':
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling(none_stop=True)
+
 
 
 
