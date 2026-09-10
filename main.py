@@ -1,6 +1,10 @@
 import os
 import sys
 
+# تنظيف المفاتيح من أي أسطر جديدة أو مسافات خفية
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "").strip()
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+
 try:
     import telebot
     import google.generativeai as genai
@@ -15,6 +19,7 @@ from flask import Flask
 from threading import Thread
 
 app = Flask('')
+
 @app.route('/')
 def home():
     return "Sanad Bot is Active!"
@@ -23,14 +28,10 @@ def run():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# سحب البيانات الآمنة والمشفرة من خزنة Render
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
 
-# تهيئة مكتبة جوجل الرسمية بالمفتاح السري الفعال
+# تهيئة Gemini
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -67,8 +68,8 @@ def welcome(message):
                 f"• الآيدي: `{user_id}`"
             )
             bot.send_message(ADMIN_CHAT_ID, new_user_alert, parse_mode="Markdown")
-    except:
-        pass
+    except Exception as e:
+        print(f"Error notifying admin: {e}")
 
     welcome_text = (
         "🌟 أهلاً بك في بوت السند الرقمي AI المساعد الذكي المتكامل!\n\n"
@@ -123,15 +124,21 @@ def handle_gemini_ai(message):
             f"قم بالإجابة أو التلخيص باللغة العربية الفصحى وباحترافية عالية تفصيلية ومقنعة: {message.text}"
         )
         ai_result = response.text
-        
     except Exception as e:
-        ai_result = "❌ خوادم المعالجة ممتلئة حالياً، يرجى إعادة إرسال سؤالك خلال ثوانٍ معدودة."
+        print(f"Gemini API Error: {e}")
+        ai_result = "❌ حدث خطأ أثناء الاتصال بالذكاء الاصطناعي، يرجى المحاولة لاحقاً."
 
+    # تعديل نفس الرسالة بدلاً من مسحها ثم إرسال جديدة لتفادي أخطاء التلغرام
     try:
-        bot.delete_message(user_id, status_msg.message_id)
-    except:
-        pass
-    bot.send_message(user_id, ai_result)
+        # إذا تجاوز النص حد تلغرام (4000 حرف)، يتم تقطيعه
+        if len(ai_result) > 4000:
+            bot.edit_message_text(ai_result[:4000], chat_id=user_id, message_id=status_msg.message_id)
+            bot.send_message(user_id, ai_result[4000:])
+        else:
+            bot.edit_message_text(ai_result, chat_id=user_id, message_id=status_msg.message_id)
+    except Exception as e:
+        print(f"Telegram Edit Message Error: {e}")
+        bot.send_message(user_id, ai_result)
 
 @bot.message_handler(content_types=['photo'])
 def handle_payment_screenshot(message):
@@ -149,19 +156,20 @@ def handle_payment_screenshot(message):
     )
     try:
         bot.send_photo(ADMIN_CHAT_ID, photo_id, caption=caption_text, reply_markup=admin_buttons(user_id), parse_mode="Markdown")
-    except:
-        pass
+    except Exception as e:
+        print(f"Error sending photo to admin: {e}")
 
 if __name__ == '__main__':
     try:
-        # الأمر السحري والقاطع لطرد خطأ الـ 409 وفرمتة تليجرام تلقائياً عند الإقلاع
         bot.delete_webhook(drop_pending_updates=True)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error clearing webhook: {e}")
+        
     t = Thread(target=run)
     t.start()
     print("🚀 البوت يعمل الآن بنجاح في السحاب...")
     bot.infinity_polling(none_stop=True)
+
 
 
 
