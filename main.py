@@ -3,47 +3,50 @@ import sys
 import io
 from threading import Thread
 from flask import Flask
-from PIL import Image
 
-# تنظيف المفاتيح تلقائياً من المسافات المخفية والأسطر الجديدة
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "").strip()
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
-
+# التثبيت التلقائي للمكتبات لضمان عدم توقف السيرفر
 try:
     import telebot
     import google.generativeai as genai
+    from PIL import Image
 except ImportError:
     os.system('pip install pyTelegramBotAPI google-generativeai Flask requests pillow')
     import telebot
     import google.generativeai as genai
+    from PIL import Image
 
-# سيرفر Flask للمحافظة على استمرار الاستضافة مجاناً على Render
+# قراءة المفاتيح ومتغيرات البيئة
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "").strip()
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+MY_CRYPTO_WALLET = os.environ.get("WALLET_ADDRESS", "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF")
+ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID", "8840372128"))
+
+# خادم Flask لإبقاء الخدمة نشطة على Render
 app = Flask('')
 
 @app.route('/')
 def home():
     return "Sanad Scientific Encyclopedia Bot is Active!"
 
-def run():
+def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-MY_CRYPTO_WALLET = os.environ.get("WALLET_ADDRESS", "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF")
-ADMIN_CHAT_ID = int(os.environ.get("ADMIN_CHAT_ID", "8840372128"))
-
-# تهيئة Gemini بالموديل المستقر
+# تهيئة الذكاء الاصطناعي Gemini 1.5 Flash
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
+# تهيئة بوت تلغرام
 bot = telebot.TeleBot(TELEGRAM_TOKEN, skip_pending=True)
 
+# قاعدة البيانات المؤقتة للذاكرة
 user_attempts = {}
 vip_users = set()
 
-# التوجيهات الأكاديمية والأخلاقية الصارمة للذكاء الاصطناعي
+# التوجيهات الأكاديمية والأخلاقية الصارمة
 SYSTEM_PROMPT = """
 أنت الموسوعة العلمية والأكاديمية الشاملة والمساعد الذكي لطلاب المدارس، الجامعات، ومرحلة الماجستير والدكتوراه.
-مجالات الاختصاص: الطب والعلوم الصحية، العلوم الطبيعية، الاقتصاد، إدارة الأعمال، والعمل الحر.
+مجالات الاختصاص: الطب والعلوم الصحية، العلوم الطبيعية، الهندسة، التكنولوجيا، الاقتصاد، إدارة الأعمال، والعمل الحر.
 
 ضوابط أمان وأخلاقيات صارمة جداً (خط أحمر):
 1. يمنع منعاً باتاً الإجابة عن أو توليد أو تحليل أي محتوى إباحي، جنسي، تعري، أو أي محتوى يسيء للنساء أو يشوه صورهن.
@@ -120,19 +123,16 @@ def send_payment_message(user_id):
     )
     bot.send_message(user_id, premium_text, parse_mode="Markdown")
 
-# معالجة الأسئلة النصية الأكاديمية
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def handle_gemini_ai(message):
     user_id = message.chat.id
     text = message.text
 
-    # فحص شروط الأمان الأخلاقية
     forbidden = ["تعري", "جنس", "إباحي", "تشويه", "عارية"]
     if any(w in text.lower() for w in forbidden):
         bot.reply_to(message, "⛔ عذراً، هذا الطلب يخالف الشروط الأخلاقية والأكاديمية للموسوعة.")
         return
 
-    # فحص حدود الاستخدام
     if user_id != ADMIN_CHAT_ID and user_id not in vip_users:
         if user_attempts.get(user_id, 0) >= 3:
             send_payment_message(user_id)
@@ -159,22 +159,18 @@ def handle_gemini_ai(message):
         print(f"Telegram Edit Message Error: {e}")
         bot.send_message(user_id, ai_result)
 
-# معالجة الصور (التمييز بين التحليل الأكاديمي وإيصالات الدفع)
 @bot.message_handler(content_types=['photo'])
 def handle_photos(message):
     user_id = message.chat.id
     username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد معرف"
 
-    # جلب ملف الصورة
     file_info = bot.get_file(message.photo[-1].file_id)
     downloaded_file = bot.download_file(file_info.file_path)
     image = Image.open(io.BytesIO(downloaded_file))
 
-    # الحالة الأولى: المستخدم انتهت محاولاته -> معاملة الصورة كـ إثبات دفع
     if user_id != ADMIN_CHAT_ID and user_id not in vip_users and user_attempts.get(user_id, 0) >= 3:
         bot.reply_to(message, "📥 تم استلام الإيصال! جاري تدقيق العملية بواسطة الذكاء الاصطناعي وإرسالها للإدارة...")
         
-        # تدقيق الإيصال بواسطة Gemini Vision
         receipt_prompt = "قم بفحص هذه الصورة وتأكيد ما إذا كانت إيصال تحويل مالي ناجح بمبلغ 5 دولار، واذكر النتيجة باختصار."
         try:
             check_res = model.generate_content([receipt_prompt, image])
@@ -196,7 +192,6 @@ def handle_photos(message):
             print(f"Error sending photo to admin: {e}")
         return
 
-    # الحالة الثانية: المستخدم لديه رصيد أو VIP -> تحليل الصورة أكاديمياً (مسألة/مخطط)
     if user_id != ADMIN_CHAT_ID and user_id not in vip_users:
         user_attempts[user_id] = user_attempts.get(user_id, 0) + 1
 
@@ -227,11 +222,12 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Error clearing webhook: {e}")
         
-    t = Thread(target=run)
+    t = Thread(target=run_flask)
     t.start()
-    print("🚀 الموسوعة العلمية تعمل الآن بنجاح على Render...")
+    print("🚀 الموسوعة العلمية تعمل الآن بنجاح...")
     bot.infinity_polling(none_stop=True)
- 
+
+
 
 
 
