@@ -1,7 +1,11 @@
 import os
 import sys
+import time
+import json
+from threading import Thread
+from flask import Flask
 
-# تثبيت وحقن مكتبة جوجل الرسمية وتليجرام آمن كلياً
+# تثبيت وحقن المكتبات تلقائياً
 try:
     import telebot
     import google.generativeai as genai
@@ -10,12 +14,9 @@ except ImportError:
     import telebot
     import google.generativeai as genai
 
-import requests
-import json
-from flask import Flask
-from threading import Thread
-
+# خادم Flask لإبقاء الخدمة حية على Render
 app = Flask('')
+
 @app.route('/')
 def home():
     return "Sanad Bot is Active!"
@@ -24,20 +25,42 @@ def run():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# قراءة مشفرة ومحمية من الخزنة عن أعين الروبوتات
+# قراءة المتغيرات من بيئة التشغيل
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 MY_CRYPTO_WALLET = "TN6T6vQg9qWqgpRC511kS6b5hSkEnKyJyF"
 ADMIN_CHAT_ID = 8840372128
 
-# تهيئة مكتبة جوجل الرسمية لكسر الحظر الجغرافي
+# تهيئة Gemini API
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-1.5-flash')
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN, skip_pending=True)
-user_attempts = {}
-vip_users = set()
+
+# ملفات حفظ البيانات لمنع ضياعها عند إعادة تشغيل Render
+VIP_FILE = "vip_users.json"
+ATTEMPTS_FILE = "user_attempts.json"
+
+def load_data(filename, default_value):
+    if os.path.exists(filename):
+        try:
+            with open(filename, "r") as f:
+                return json.load(f)
+        except Exception:
+            return default_value
+    return default_value
+
+def save_data(filename, data):
+    try:
+        with open(filename, "w") as f:
+            json.dump(data, f)
+    except Exception as e:
+        print(f"Error saving {filename}: {e}")
+
+# استرجاع الحالات المشتركة
+vip_users = set(load_data(VIP_FILE, []))
+user_attempts = load_data(ATTEMPTS_FILE, {})
 
 def main_menu():
     markup = telebot.types.InlineKeyboardMarkup()
@@ -53,14 +76,36 @@ def admin_buttons(target_user_id):
     markup.add(btn_accept, btn_reject)
     return markup
 
+def generate_gemini_response(prompt, retries=3, delay=2):
+    """دالة تعيد المحاولة تلقائياً مع Gemini وتتجنب خطأ امتلاء الخوادم"""
+    formatted_prompt = f"قم بالإجابة أو التلخيص باللغة العربية الفصحى وباحترافية عالية تفصيلية ومقنعة: {prompt}"
+    
+    for attempt in range(1, retries + 1):
+        try:
+            response = model.generate_content(formatted_prompt)
+            if response and response.text:
+                return response.text
+            else:
+                return "⚠️ تعذر معالجة النص الحالي بسبب القيود الخاصة بسياسات الأمان."
+        except Exception as e:
+            print(f"Gemini Attempt {attempt} failed: {e}")
+            if attempt < retries:
+                time.sleep(delay)
+                delay *= 2  # مضاعفة وقت الانتظار
+            else:
+                return "❌ خوادم المعالجة ممتلئة حالياً، يرجى إعادة إرسال سؤالك خلال ثوانٍ معدودة."
+
 @bot.message_handler(commands=['start'])
 def welcome(message):
     user_id = message.chat.id
     username = f"@{message.from_user.username}" if message.from_user.username else "لا يوجد معرف"
-    
-    try:
-        if user_id not in user_attempts:
-            user_attempts[user_id] = 0
+    str_user_id = str(user_id)
+
+    if str_user_id not in user_attempts:
+        user_attempts[str_user_id] = 0
+        save_data(ATTEMPTS_FILE, user_attempts)
+        
+        try:
             new_user_alert = (
                 f"👤 *مستخدم جديد دخل البوت الآن!*\n\n"
                 f"• الاسم: {message.from_user.first_name}\n"
@@ -68,8 +113,8 @@ def welcome(message):
                 f"• الآيدي: `{user_id}`"
             )
             bot.send_message(ADMIN_CHAT_ID, new_user_alert, parse_mode="Markdown")
-    except:
-        pass
+        except Exception:
+            pass
 
     welcome_text = (
         "🌟 أهلاً بك في بوت السند الرقمي AI المساعد الذكي المتكامل!\n\n"
@@ -91,6 +136,7 @@ def callback_inline(call):
     elif data.startswith("vip_accept_") and call.from_user.id == ADMIN_CHAT_ID:
         target_id = int(data.split("_")[-1])
         vip_users.add(target_id)
+        save_data(VIP_FILE, list(vip_users))
         bot.send_message(target_id, "🎉 *تهانينا! تم فحص التحويل وتفعيل اشتراكك في الباقة المميزة VIP بنجاح. يمكنك الآن استخدام البوت بلا حدود مدى الحياة!*", parse_mode="Markdown")
         bot.answer_callback_query(call.id, "✅ تم التفعيل!")
     elif data.startswith("vip_reject_") and call.from_user.id == ADMIN_CHAT_ID:
@@ -111,27 +157,27 @@ def send_payment_message(user_id):
 @bot.message_handler(func=lambda message: True, content_types=['text'])
 def handle_gemini_ai(message):
     user_id = message.chat.id
+    str_user_id = str(user_id)
+    
+    # فحص صلاحيات الاستخدام
     if user_id != ADMIN_CHAT_ID and user_id not in vip_users:
-        if user_attempts.get(user_id, 0) >= 3:
+        current_attempts = user_attempts.get(str_user_id, 0)
+        if current_attempts >= 3:
             send_payment_message(user_id)
             return
-        user_attempts[user_id] = user_attempts.get(user_id, 0) + 1
+        user_attempts[str_user_id] = current_attempts + 1
+        save_data(ATTEMPTS_FILE, user_attempts)
 
     status_msg = bot.reply_to(message, "⏳ جاري التفكير والتلخيص...")
     
-    try:
-        response = model.generate_content(
-            f"قم بالإجابة أو التلخيص باللغة العربية الفصحى وباحترافية عالية تفصيلية ومقنعة: {message.text}"
-        )
-        ai_result = response.text
-        
-    except Exception as e:
-        ai_result = "❌ خوادم المعالجة ممتلئة حالياً، يرجى إعادة إرسال سؤالك خلال ثوانٍ معدودة."
+    # استدعاء Gemini مع دالة إعادة المحاولة التلقائية
+    ai_result = generate_gemini_response(message.text)
 
     try:
         bot.delete_message(user_id, status_msg.message_id)
-    except:
+    except Exception:
         pass
+        
     bot.send_message(user_id, ai_result)
 
 @bot.message_handler(content_types=['photo'])
@@ -150,16 +196,15 @@ def handle_payment_screenshot(message):
     )
     try:
         bot.send_photo(ADMIN_CHAT_ID, photo_id, caption=caption_text, reply_markup=admin_buttons(user_id), parse_mode="Markdown")
-    except:
+    except Exception:
         pass
 
 if __name__ == '__main__':
     try:
-        # الإنعاش القسري وطرد التداخل عند إعادة التشغيل تلقائياً
         bot.delete_webhook(drop_pending_updates=True)
-    except:
+    except Exception:
         pass
     t = Thread(target=run)
     t.start()
-    print("🚀 البوت يعمل الآن بنجاح في السحاب...")
+    print("🚀 البوت يعمل الآن بنجاح...")
     bot.infinity_polling(none_stop=True)
